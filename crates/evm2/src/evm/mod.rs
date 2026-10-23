@@ -1397,6 +1397,15 @@ impl<'a, T: EvmTypes> Evm<'a, T> {
         if self.contains_precompile(message) {
             return self.execute_call_precompile(checkpoint, message);
         }
+        // A call to an account without code stops without running a frame, as in geth and revm,
+        // so inspectors observe no steps for it.
+        if message.code.is_empty() {
+            return Ok(Self::error_message_result(
+                InstrStop::Stop,
+                message.gas_limit,
+                message.reservoir,
+            ));
+        }
         let stop = self.run_frame(tx_env, message, checkpoint.clone())?;
         Ok(self.finish_call_message_run(checkpoint, stop))
     }
